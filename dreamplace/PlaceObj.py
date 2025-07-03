@@ -47,8 +47,8 @@ class PreconditionOp:
         self.best_overflow = None
         self.overflows = []
         self.enable_timing = False
-        self.timing_loss_weight = 1.0  # 可调权重
-        self.timing_fn = None  # 后续设置一个函数
+        self.timing_loss_weight = 1.0  # timing weight
+        self.timing_fn = None
         if len(placedb.regions) > 0:
             self.movablenode2fence_region_map_clamp = (
                 data_collections.node2fence_region_map[: placedb.num_movable_nodes]

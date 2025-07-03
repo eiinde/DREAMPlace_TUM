@@ -308,7 +308,7 @@ class BasicPlace(nn.Module):
                     critical_nodes = torch.unique(pin2node_map[critical_mask])
                     logging.info(f"Found {critical_nodes.numel()} timing-critical cells for initialization")
 
-                    # 拉近 critical cells 的初始布局位置（靠近中心）
+
                     center_x = (placedb.xl + placedb.xh) / 2
                     center_y = (placedb.yl + placedb.yh) / 2
                     std_x = (placedb.xh - placedb.xl) * 0.01
@@ -317,7 +317,7 @@ class BasicPlace(nn.Module):
                     pos_tensor[critical_nodes] = torch.normal(center_x, std_x, size=(critical_nodes.shape[0],), device=pos_tensor.device)
                     pos_tensor[critical_nodes + placedb.num_nodes] = torch.normal(center_y, std_y, size=(critical_nodes.shape[0],), device=pos_tensor.device)
 
-                    # 更新 init_pos
+
                     self.init_pos = pos_tensor.cpu().numpy()
                 else:
                     logging.info("No critical slack found; skipping timing-aware init")

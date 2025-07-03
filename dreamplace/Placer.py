@@ -60,7 +60,7 @@ def place(params):
     timer = None
     if params.enable_insta["timing_opt"]:
         logging.info("Timing optimization enabled (INSTA)")
-        # INSTA 自己初始化 CSV 在 BasicPlace 中已经处理
+
     else:
         logging.info("Timing optimization disabled or using OpenTimer (deprecated)")
     # solve placement
