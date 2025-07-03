@@ -1,4 +1,4 @@
-from thirdparty.INSTA.src.core.insta import INSTA
+from thirdparty.INSTA_TUM.src.core.insta import INSTA
 import torch
 
 
