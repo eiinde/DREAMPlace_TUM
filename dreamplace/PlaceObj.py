@@ -3,7 +3,7 @@
 # @author Yibo Lin
 # @date   Jul 2018
 # @brief  Placement model class defining the placement objective.
-#
+# new
 
 import os
 import sys
@@ -32,7 +32,7 @@ import dreamplace.ops.pin_utilization.pin_utilization as pin_utilization
 import dreamplace.ops.nctugr_binary.nctugr_binary as nctugr_binary
 import dreamplace.ops.adjust_node_area.adjust_node_area as adjust_node_area
 import dreamplace.ops.gift_init.gift_init as gift_init
-
+from Callinsta import Call_Insta
 
 class PreconditionOp:
     """Preconditioning engine is critical for convergence.
@@ -46,6 +46,9 @@ class PreconditionOp:
         self.alpha = 1.0
         self.best_overflow = None
         self.overflows = []
+        self.enable_timing = False
+        self.timing_loss_weight = 1.0  # 可调权重
+        self.timing_fn = None  # 后续设置一个函数
         if len(placedb.regions) > 0:
             self.movablenode2fence_region_map_clamp = (
                 data_collections.node2fence_region_map[: placedb.num_movable_nodes]
@@ -139,7 +142,7 @@ class PlaceObj(nn.Module):
     It includes various ops related to global placement as well.
     """
     def __init__(self, density_weight, params, placedb, data_collections,
-                 op_collections, global_place_params):
+                 op_collections, global_place_params,timing_fn=None, timing_loss_weight=1.0):
         """
         @brief initialize ops for placement
         @param density_weight density weight in the objective
@@ -150,7 +153,9 @@ class PlaceObj(nn.Module):
         @param global_place_params global placement parameters for current global placement stage
         """
         super(PlaceObj, self).__init__()
-
+        self.enable_timing = timing_fn is not None
+        self.timing_fn = timing_fn
+        self.timing_loss_weight = timing_loss_weight
         ### quadratic penalty
         self.density_quad_coeff = 2000
         self.init_density = None
@@ -245,6 +250,9 @@ class PlaceObj(nn.Module):
             params, placedb)
         self.op_collections.precondition_op = self.build_precondition(
             params, placedb, self.data_collections, self.op_collections)
+        self.op_collections.precondition_op.enable_timing = params.timing_opt
+        self.op_collections.precondition_op.timing_fn = getattr(self, 'timing_fn', None)
+        self.op_collections.precondition_op.timing_loss_weight = getattr(self, 'timing_loss_weight', 1.0)
         self.op_collections.noise_op = self.build_noise(
             params, placedb, self.data_collections)
         if params.routability_opt_flag:
@@ -315,8 +323,26 @@ class PlaceObj(nn.Module):
             result = self.wirelength + self.density_weight.dot(self.density)
         else:
             result = torch.add(self.wirelength, self.density, alpha=(self.density_factor * self.density_weight).item())
+        if self.enable_timing and self.timing_fn is not None:
+            timing_loss = self.timing_fn(pos)
+            self.timing_loss = timing_loss
+            result = result + self.timing_loss_weight * timing_loss
 
         return result
+
+    @staticmethod
+    def build_timing_loss_fn(params, data_collections):
+     timing_obj = Call_Insta(
+        insta_path=params.insta_path,
+        design_path=params.design_path,
+        input_path=params.input_path,
+        pin_offset_x=data_collections.pin_offset_x,
+        pin_offset_y=data_collections.pin_offset_y,
+        pin2node_map=data_collections.pin2node_map
+     )
+     def timing_fn(pos):
+        return timing_obj.timing_loss(pos)
+     return timing_fn
 
     def obj_and_grad_fn_old(self, pos_w, pos_g=None, admm_multiplier=None):
         """

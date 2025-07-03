@@ -42,21 +42,27 @@ def place(params):
 
     # Read timing constraints provided in the benchmarks into out timing analysis
     # engine and then pass the timer into the placement core.
-    timer = None
-    if params.timing_opt_flag:
-        tt = time.time()
-        timer = Timer.Timer()
-        timer(params, placedb)
+    #timer = None
+    #if params.timing_opt_flag:
+        #tt = time.time()
+        #timer = Timer.Timer()
+        #timer(params, placedb)
         # This must be done to explicitly execute the parser builders.
         # The parsers in OpenTimer are all in lazy mode.
-        timer.update_timing()
-        logging.info("reading timer takes %.2f seconds" % (time.time() - tt))
+        #timer.update_timing()
+        #logging.info("reading timer takes %.2f seconds" % (time.time() - tt))
 
         # Dump example here. Some dump functions are defined.
         # Check instance methods defined in Timer.py for debugging.
         # timer.dump_pin_cap("pin_caps.txt")
         # timer.dump_graph("timing_graph.txt")
-
+    # new insta
+    timer = None
+    if params.enable_insta["timing_opt"]:
+        logging.info("Timing optimization enabled (INSTA)")
+        # INSTA 自己初始化 CSV 在 BasicPlace 中已经处理
+    else:
+        logging.info("Timing optimization disabled or using OpenTimer (deprecated)")
     # solve placement
     tt = time.time()
     placer = NonLinearPlace.NonLinearPlace(params, placedb, timer)
@@ -184,6 +190,7 @@ if __name__ == "__main__":
     # load parameters
     params.load(sys.argv[1])
     logging.info("parameters = %s" % (params))
+
     # control numpy multithreading
     os.environ["OMP_NUM_THREADS"] = "%d" % (params.num_threads)
 

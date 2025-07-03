@@ -26,11 +26,14 @@ class Params:
         with open(filename, "r") as f:
             params_dict = json.load(f, object_pairs_hook=OrderedDict)
         for key, value in params_dict.items():
-            if 'default' in value: 
+            if isinstance(value, dict) and 'default' in value:
                 self.__dict__[key] = value['default']
+            elif isinstance(value, dict):  # for nested dicts like enable_insta
+                self.__dict__[key] = {}
+                for subkey, subvalue in value.items():
+                    self.__dict__[key][subkey] = subvalue
             else:
                 self.__dict__[key] = None
-        self.__dict__['params_dict'] = params_dict
 
     def printWelcome(self):
         """
@@ -169,3 +172,12 @@ class Params:
             return "def"
         else: # Bookshelf
             return "pl"
+
+    @property
+    def timing_opt(self):
+        return self.enable_insta.get("timing_opt", False)
+
+    @property
+    def timing_loss_weight(self):
+        return self.enable_insta.get("timing_weight", 1.0)
+

@@ -3,7 +3,7 @@
 # @author Yibo Lin
 # @date   Jun 2018
 # @brief  Base placement class
-#
+# new
 
 import os
 import sys
@@ -33,7 +33,7 @@ import dreamplace.ops.independent_set_matching.independent_set_matching as indep
 import dreamplace.ops.pin_weight_sum.pin_weight_sum as pws
 import dreamplace.ops.timing.timing as timing
 import pdb
-
+from Callinsta import Call_Insta
 
 class PlaceDataCollection(object):
     """
@@ -280,6 +280,51 @@ class BasicPlace(nn.Module):
         # y position
         self.init_pos[placedb.num_nodes:placedb.num_nodes +
                       placedb.num_physical_nodes] = placedb.node_y
+        # ================= TIMING-AWARE INIT (INSTA) =================
+        if params.timing_opt:
+            logging.info("Performing timing-aware initialization (INSTA)")
+
+            pos_tensor = torch.tensor(self.init_pos, dtype=torch.float32).to("cuda" if params.gpu else "cpu")
+            device = pos_tensor.device
+
+            pin2node_map = torch.tensor(placedb.pin2node_map, dtype=torch.long).to(device)
+            pin_offset_x = torch.tensor(placedb.pin_offset_x, dtype=torch.float32).to(device)
+            pin_offset_y = torch.tensor(placedb.pin_offset_y, dtype=torch.float32).to(device)
+
+            try:
+
+                slack = Call_Insta(
+                    pos=pos_tensor,
+                    pin_offset_x=pin_offset_x,
+                    pin_offset_y=pin_offset_y,
+                    pin2node_map=pin2node_map,
+                    insta_path = params.insta_path,
+                    design_path=params.design_path,
+                    input_path=params.input_path
+                )
+
+                critical_mask = slack < 0
+                if critical_mask.any():
+                    critical_nodes = torch.unique(pin2node_map[critical_mask])
+                    logging.info(f"Found {critical_nodes.numel()} timing-critical cells for initialization")
+
+                    # 拉近 critical cells 的初始布局位置（靠近中心）
+                    center_x = (placedb.xl + placedb.xh) / 2
+                    center_y = (placedb.yl + placedb.yh) / 2
+                    std_x = (placedb.xh - placedb.xl) * 0.01
+                    std_y = (placedb.yh - placedb.yl) * 0.01
+
+                    pos_tensor[critical_nodes] = torch.normal(center_x, std_x, size=(critical_nodes.shape[0],), device=pos_tensor.device)
+                    pos_tensor[critical_nodes + placedb.num_nodes] = torch.normal(center_y, std_y, size=(critical_nodes.shape[0],), device=pos_tensor.device)
+
+                    # 更新 init_pos
+                    self.init_pos = pos_tensor.cpu().numpy()
+                else:
+                    logging.info("No critical slack found; skipping timing-aware init")
+
+            except Exception as e:
+                logging.warning(f"Timing-aware init failed due to: {e}")
+        # =============================================================
         if params.global_place_flag and params.random_center_init_flag:  # move to center of layout
             self.init_pos[placedb.num_nodes:placedb.num_nodes +
                           placedb.num_movable_nodes] = np.random.normal(

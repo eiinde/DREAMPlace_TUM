@@ -3,7 +3,7 @@
 # @author Yibo Lin
 # @date   Jul 2018
 # @brief  Nonlinear placement engine to be called with parameters and placement database
-#
+# new
 
 import os
 import sys
@@ -104,6 +104,7 @@ class NonLinearPlace(BasicPlace.BasicPlace):
                     # at the 2nd stage, total_movable_node_area should exclude movable macro area to enable more aggresive spreading of cells
                     placedb.total_movable_node_area = placedb.total_movable_cell_area
                 # construct placement model
+                timing_fn = PlaceObj.PlaceObj.build_timing_loss_fn(params,self.data_collection) if params.timing_opt else None
                 model = PlaceObj.PlaceObj(
                     density_weight,
                     params,
@@ -111,6 +112,8 @@ class NonLinearPlace(BasicPlace.BasicPlace):
                     self.data_collections,
                     self.op_collections,
                     global_place_params,
+                    timing_fn=timing_fn,
+                    timing_loss_weight=params.timing_loss_weight
                 ).to(self.data_collections.pos[0].device)
 
                 # initialization before global placement 

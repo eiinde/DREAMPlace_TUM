@@ -278,7 +278,7 @@
     },
 "enable_net_weighting" : {
     "description" : "enable net weighting during global placement",
-    "default" : 1,
+    "default" : 0,
     "required" : "required for timing-driven mode"
     },
 "max_net_weight" : {
@@ -305,5 +305,25 @@
 "macro_halo_y": {
     "description": "vertical halo around movable macros",
     "default": 0
-    }
+    },
+"insta_path": {
+    "description": "Path to INSTA CSV input directory",
+    "default": "thirdparty/INSTA/testcase/aes_cipher_top"
+
+   },
+"design_path": {
+    "description": "Path to INSTA CSV input directory",
+    "default": "aes_cipher_top"
+
+   },
+"input_path": {
+    "description": "Path to INSTA CSV input directory",
+    "default": "insta_inputs"
+
+   },
+  "enable_insta": {
+    "timing_opt": true,
+    "timing_weight": 1.0
+  }
+
 }
